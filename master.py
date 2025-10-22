@@ -1490,30 +1490,32 @@ async def dashboard():
     
     # Since Projects Already Exists Lets Hook Our Indexing here 
     # If Projects Doesnt Exist Then CMI , ARI  FSI , OTH
+    
     if(Projects):
-        CMI = len(await db_query("""
-    SELECT * FROM jobs WHERE user_id = ?  AND status = ? 
-""", (g.current_user['user_id'], "completed")))
-        ARI = len(await db_query("""
-    SELECT * FROM jobs WHERE user_id = ?  AND status = ? 
-""", (g.current_user['user_id'], "started")))
-        
-        FSI = len(await db_query("""
-    SELECT * FROM jobs WHERE user_id = ?  AND status = ? 
-""", (g.current_user['user_id'], "failed")))
-        
-        OTH = len(await db_query("""
-    SELECT * FROM jobs WHERE user_id = ?  AND status = ? 
-""", (g.current_user['user_id'], "shared")))
-    else:
+        # Was being logically Rev By The CMI Block from 1504
         # Init All Holdings With Int(0) 
         # Holding Inc : CMI , ARI , FSI , OTH 
         for x in CMI , ARI , FSI , OTH : 
             x = int(0) 
             
         
-        
-        
+ 
+      
+    CMI = len(await db_query("""
+SELECT * FROM jobs WHERE user_id = ?  AND status = ? 
+""", (g.current_user['user_id'], "completed")))
+    ARI = len(await db_query("""
+SELECT * FROM jobs WHERE user_id = ?  AND status = ? 
+""", (g.current_user['user_id'], "started")))
+    
+    FSI = len(await db_query("""
+SELECT * FROM jobs WHERE user_id = ?  AND status = ? 
+""", (g.current_user['user_id'], "failed")))
+    
+    OTH = len(await db_query("""
+SELECT * FROM jobs WHERE user_id = ?  AND status = ? 
+""", (g.current_user['user_id'], "shared")))
+    
     print(profile_id)
     
     Timestamp = utils.Space_Time_Generator("Mutate")
