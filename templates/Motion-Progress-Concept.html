@@ -1,0 +1,31 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing - Motion Tracking</title>
+   <script src="{{url_for('static' , filename='providers/frame/3.4.16')}}"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 text-center">
+        <div class="bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-4"></i>
+            <h2 class="text-2xl font-bold mb-2">Processing Video</h2>
+            <p class="text-gray-600 mb-4">Your video is being analyzed. This may take a few minutes.</p>
+            <div class="w-full bg-gray-200 rounded-full h-4">
+                <div id="progress-bar" class="bg-blue-500 h-4 rounded-full" style="width: {{ status.progress }}%"></div>
+            </div>
+            <p id="progress-text" class="mt-2 text-sm text-gray-600">{{ status.progress }}% Complete</p>
+            <p id="status-message" class="mt-2 text-sm">{{ status.message }}</p>
+        </div>
+    </div>
+    <script>
+        // Auto-refresh progress
+        setInterval(() => {
+            window.location.reload();
+        }, 5000);
+    </script>
+</body>
+</html>

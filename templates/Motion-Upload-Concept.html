@@ -1,0 +1,420 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Video - Enhanced Motion Tracking</title>
+   <script src="{{url_for('static' , filename='providers/frame/3.4.16')}}"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .drag-over {
+            border-color: #3b82f6;
+            background-color: #f0f9ff;
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .file-info {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                <i class="fas fa-cloud-upload-alt text-blue-500 mr-3"></i>
+                Upload Video for Analysis
+            </h1>
+            <p class="text-gray-600">Upload your video file for advanced motion tracking and trajectory analysis</p>
+        </div>
+
+        <!-- Upload Card -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <!-- Progress Bar -->
+            <div id="upload-progress" class="hidden">
+                <div class="h-2 bg-gray-200">
+                    <div id="progress-bar" class="h-full bg-blue-500 progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="p-8">
+                <!-- Drag & Drop Area -->
+                <div id="drop-area" class="border-3 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer transition-all duration-200 hover:border-blue-400 hover:bg-blue-50">
+                    <i class="fas fa-cloud-upload-alt text-6xl text-gray-400 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">Drop your video file here</h3>
+                    <p class="text-gray-500 mb-4">or click to browse files</p>
+                    <input type="file" id="file-input" class="hidden" accept="video/*">
+                    <button onclick="document.getElementById('file-input').click()" 
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-folder-open mr-2"></i>Choose File
+                    </button>
+                    <p class="text-sm text-gray-400 mt-4">Supported formats: MP4, AVI, MOV, WMV (Max 500MB)</p>
+                </div>
+
+                <!-- File Info -->
+                <div id="file-info" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg file-info">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-file-video text-green-500 text-xl mr-3"></i>
+                            <div>
+                                <div id="file-name" class="font-semibold text-gray-800"></div>
+                                <div id="file-size" class="text-sm text-gray-600"></div>
+                            </div>
+                        </div>
+                        <button onclick="clearFile()" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Configuration Options -->
+                <div id="config-options" class="hidden mt-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Analysis Configuration</h3>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Confidence Threshold -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-bullseye mr-2"></i>Confidence Threshold
+                            </label>
+                            <input type="range" id="confidence" min="0.1" max="0.9" step="0.1" value="0.5" 
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>Low (0.1)</span>
+                                <span id="confidence-value">Medium (0.5)</span>
+                                <span>High (0.9)</span>
+                            </div>
+                        </div>
+
+                        <!-- Frame Skip -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-film mr-2"></i>Frame Processing Rate
+                            </label>
+                            <select id="frame-skip" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="1">Every frame (Highest accuracy)</option>
+                                <option value="3" selected>Every 3rd frame (Balanced)</option>
+                                <option value="5">Every 5th frame (Faster processing)</option>
+                                <option value="10">Every 10th frame (Fastest)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Options -->
+                    <div class="mt-6">
+                        <button onclick="toggleAdvancedOptions()" class="flex items-center text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-cogs mr-2"></i>
+                            Advanced Options
+                            <i id="advanced-arrow" class="fas fa-chevron-down ml-2"></i>
+                        </button>
+                        
+                        <div id="advanced-options" class="hidden mt-4 space-y-4">
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enable-heatmap" checked class="mr-2">
+                                        Generate Motion Heatmap
+                                    </label>
+                                </div>
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enable-trajectories" checked class="mr-2">
+                                        Track Individual Trajectories
+                                    </label>
+                                </div>
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enable-analytics" checked class="mr-2">
+                                        Generate Analytics Report
+                                    </label>
+                                </div>
+                                <div>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="enable-export" checked class="mr-2">
+                                        Enable Data Export
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Start Analysis Button -->
+                    <div class="mt-8 text-center">
+                        <button id="start-analysis" 
+                                class="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 transform hover:scale-105">
+                            <i class="fas fa-play-circle mr-2"></i>Start Motion Analysis
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Processing Status -->
+                <div id="processing-status" class="hidden mt-8">
+                    <div class="text-center p-6 bg-blue-50 rounded-lg">
+                        <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i>
+                        <h4 class="text-lg font-semibold text-blue-800">Processing Video</h4>
+                        <p id="status-message" class="text-blue-600 mt-2">Initializing analysis...</p>
+                        
+                        <div class="mt-4 bg-white rounded-full h-4 overflow-hidden">
+                            <div id="processing-bar" class="h-full bg-gradient-to-r from-blue-500 to-purple-500 progress-bar" style="width: 0%"></div>
+                        </div>
+                        
+                        <div class="mt-4 text-sm text-blue-600">
+                            <span id="progress-text">0%</span> • 
+                            <span id="time-estimate">Estimating time...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 text-center">
+                        <a href="/" class="text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-home mr-2"></i>Return to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Overview -->
+        <div class="mt-8 grid md:grid-cols-3 gap-6">
+            <div class="text-center p-6 bg-white rounded-lg shadow">
+                <i class="fas fa-crosshairs text-3xl text-blue-500 mb-3"></i>
+                <h4 class="font-semibold mb-2">Object Tracking</h4>
+                <p class="text-gray-600 text-sm">Advanced multi-object tracking with Kalman filtering</p>
+            </div>
+            <div class="text-center p-6 bg-white rounded-lg shadow">
+                <i class="fas fa-map-marked-alt text-3xl text-green-500 mb-3"></i>
+                <h4 class="font-semibold mb-2">Trajectory Analysis</h4>
+                <p class="text-gray-600 text-sm">Detailed path analysis and movement patterns</p>
+            </div>
+            <div class="text-center p-6 bg-white rounded-lg shadow">
+                <i class="fas fa-chart-bar text-3xl text-purple-500 mb-3"></i>
+                <h4 class="font-semibold mb-2">Interactive Reports</h4>
+                <p class="text-gray-600 text-sm">Comprehensive analytics and visualization</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let jobId = null;
+
+        // Initialize event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDragAndDrop();
+            setupEventListeners();
+        });
+
+        function initializeDragAndDrop() {
+            const dropArea = document.getElementById('drop-area');
+            const fileInput = document.getElementById('file-input');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight() {
+                dropArea.classList.add('drag-over');
+            }
+
+            function unhighlight() {
+                dropArea.classList.remove('drag-over');
+            }
+
+            dropArea.addEventListener('drop', handleDrop, false);
+            fileInput.addEventListener('change', handleFileSelect, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+
+            function handleFileSelect(e) {
+                handleFiles(e.target.files);
+            }
+        }
+
+        function setupEventListeners() {
+            // Confidence slider
+            document.getElementById('confidence').addEventListener('input', function() {
+                const value = parseFloat(this.value);
+                const confidenceText = value < 0.4 ? 'Low' : value < 0.7 ? 'Medium' : 'High';
+                document.getElementById('confidence-value').textContent = `${confidenceText} (${value})`;
+            });
+
+            // Start analysis button
+            document.getElementById('start-analysis').addEventListener('click', startAnalysis);
+        }
+
+        function handleFiles(files) {
+            if (files.length === 0) return;
+
+            const file = files[0];
+            
+            // Validate file type
+            const validTypes = ['video/mp4', 'video/avi', 'video/quicktime', 'video/x-ms-wmv'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please select a valid video file (MP4, AVI, MOV, WMV)');
+                return;
+            }
+
+            // Validate file size (500MB limit)
+            if (file.size > 500 * 1024 * 1024) {
+                alert('File size must be less than 500MB');
+                return;
+            }
+
+            selectedFile = file;
+            displayFileInfo(file);
+            showConfigurationOptions();
+        }
+
+        function displayFileInfo(file) {
+            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+            
+            document.getElementById('file-name').textContent = file.name;
+            document.getElementById('file-size').textContent = `${fileSize} MB`;
+            document.getElementById('file-info').classList.remove('hidden');
+        }
+
+        function showConfigurationOptions() {
+            document.getElementById('config-options').classList.remove('hidden');
+        }
+
+        function clearFile() {
+            selectedFile = null;
+            document.getElementById('file-input').value = '';
+            document.getElementById('file-info').classList.add('hidden');
+            document.getElementById('config-options').classList.add('hidden');
+        }
+
+        function toggleAdvancedOptions() {
+            const options = document.getElementById('advanced-options');
+            const arrow = document.getElementById('advanced-arrow');
+            
+            if (options.classList.contains('hidden')) {
+                options.classList.remove('hidden');
+                arrow.classList.remove('fa-chevron-down');
+                arrow.classList.add('fa-chevron-up');
+            } else {
+                options.classList.add('hidden');
+                arrow.classList.remove('fa-chevron-up');
+                arrow.classList.add('fa-chevron-down');
+            }
+        }
+
+        async function startAnalysis() {
+            if (!selectedFile) {
+                alert('Please select a video file first');
+                return;
+            }
+
+            const confidence = parseFloat(document.getElementById('confidence').value);
+            const frameSkip = parseInt(document.getElementById('frame-skip').value);
+
+            // Show processing status
+            document.getElementById('config-options').classList.add('hidden');
+            document.getElementById('processing-status').classList.remove('hidden');
+
+            try {
+                const formData = new FormData();
+                formData.append('video', selectedFile);
+                formData.append('confidence', confidence);
+                formData.append('frame_skip', frameSkip);
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    jobId = result.job_id;
+                    monitorProgress(jobId);
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+
+            } catch (error) {
+                document.getElementById('status-message').textContent = `Error: ${error.message}`;
+                document.getElementById('status-message').classList.add('text-red-600');
+            }
+        }
+
+        async function monitorProgress(jobId) {
+            const progressBar = document.getElementById('processing-bar');
+            const progressText = document.getElementById('progress-text');
+            const statusMessage = document.getElementById('status-message');
+            const timeEstimate = document.getElementById('time-estimate');
+
+            let startTime = Date.now();
+
+            const updateProgress = async () => {
+                try {
+                    const response = await fetch(`/api/motion/status/${jobId}`);
+                    const status = await response.json();
+
+                    if (status.error) {
+                        statusMessage.textContent = `Error: ${status.error}`;
+                        statusMessage.classList.add('text-red-600');
+                        return;
+                    }
+
+                    const progress = status.progress || 0;
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `${Math.round(progress)}%`;
+                    statusMessage.textContent = status.message || 'Processing...';
+
+                    // Calculate time estimate
+                    if (progress > 0) {
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        const totalEstimated = elapsed / (progress / 100);
+                        const remaining = Math.max(0, totalEstimated - elapsed);
+                        timeEstimate.textContent = `~${Math.round(remaining)}s remaining`;
+                    }
+
+                    if (status.status === 'completed') {
+                        statusMessage.innerHTML = `<i class="fas fa-check-circle mr-2"></i>Analysis completed!`;
+                        statusMessage.classList.add('text-green-600');
+                        
+                        setTimeout(() => {
+                            window.location.href = `/results/${jobId}`;
+                        }, 2000);
+                    } else if (status.status === 'failed') {
+                        statusMessage.textContent = `Analysis failed: ${status.message}`;
+                        statusMessage.classList.add('text-red-600');
+                    } else {
+                        setTimeout(updateProgress, 2000);
+                    }
+
+                } catch (error) {
+                    console.error('Progress monitoring error:', error);
+                    setTimeout(updateProgress, 5000);
+                }
+            };
+
+            updateProgress();
+        }
+    </script>
+</body>
+</html>

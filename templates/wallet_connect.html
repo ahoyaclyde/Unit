@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forensic Platform - Connect Wallet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card { backdrop-filter: blur(10px); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+        .wallet-option:hover { transform: translateY(-2px); transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="card rounded-xl p-8 w-full max-w-md text-white">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold mb-2">Connect Wallet</h1>
+            <p class="text-white/80">Sign in with your crypto wallet</p>
+        </div>
+
+        <!-- Wallet Connection Options -->
+        <div class="space-y-4 mb-6">
+            <div class="wallet-option bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-all" 
+                 onclick="connectWallet('metamask')">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mr-4">
+                        <span class="font-bold text-white">M</span>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold">MetaMask</h3>
+                        <p class="text-white/70 text-sm">Connect to your MetaMask wallet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wallet-option bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-all" 
+                 onclick="connectWallet('walletconnect')">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-4">
+                        <span class="font-bold text-white">WC</span>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold">WalletConnect</h3>
+                        <p class="text-white/70 text-sm">Scan QR code with any wallet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wallet-option bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-all" 
+                 onclick="showManualConnect()">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-4">
+                        <span class="font-bold text-white">K</span>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold">Manual Key Entry</h3>
+                        <p class="text-white/70 text-sm">Enter your private key manually</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Key Entry Form (Hidden by default) -->
+        <div id="manualConnect" class="hidden space-y-4">
+            <div>
+                <label for="privateKey" class="block text-sm font-medium mb-2">Private Key</label>
+                <input type="password" id="privateKey" 
+                       class="w-full p-3 rounded bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+                       placeholder="Enter your private key">
+                <p class="text-xs text-red-300 mt-1">Warning: Never share your private key with anyone</p>
+            </div>
+            <button onclick="connectWithPrivateKey()" 
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
+                Connect with Private Key
+            </button>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="hidden p-4 rounded-lg mb-4">
+            <div class="flex items-center">
+                <div id="statusIcon" class="w-6 h-6 rounded-full mr-3"></div>
+                <span id="statusText" class="font-medium"></span>
+            </div>
+        </div>
+
+        <!-- Verification Section (Hidden until connected) -->
+        <div id="verificationSection" class="hidden space-y-4">
+            <div class="bg-white/10 rounded-lg p-4">
+                <h3 class="font-semibold mb-2">Verify Wallet Ownership</h3>
+                <p class="text-sm text-white/70 mb-3" id="verificationMessage"></p>
+                <div class="flex space-x-2">
+                    <input type="text" id="signatureInput" 
+                           class="flex-grow p-2 rounded bg-white/20 border border-white/30 text-white text-sm"
+                           placeholder="Enter signature" readonly>
+                    <button onclick="copySignature()" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 rounded text-sm transition-colors">
+                        Copy
+                    </button>
+                </div>
+            </div>
+            <button id="verifyButton" onclick="verifySignature()" 
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
+                Verify and Sign In
+            </button>
+        </div>
+
+        <!-- Back to Login -->
+        <div class="text-center mt-6">
+            <a href="/auth/login" class="text-blue-300 hover:text-blue-200 font-semibold transition-colors">
+                ← Back to traditional login
+            </a>
+        </div>
+
+        <!-- Messages -->
+        <div id="message" class="hidden mt-4 p-3 rounded text-sm"></div>
+    </div>
+
+    <script>
+        let currentAccount = null;
+        let verificationNonce = null;
+        let walletProvider = null;
+
+        async function connectWallet(walletType) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            
+            try {
+                if (walletType === 'metamask') {
+                    if (typeof window.ethereum !== 'undefined') {
+                        walletProvider = new ethers.providers.Web3Provider(window.ethereum);
+                        
+                        // Request account access
+                        const accounts = await window.ethereum.request({ 
+                            method: 'eth_requestAccounts' 
+                        });
+                        
+                        currentAccount = accounts[0];
+                        showConnectionSuccess(statusDiv, statusIcon, statusText, `Connected: ${formatAddress(currentAccount)}`);
+                        await initiateVerification();
+                        
+                    } else {
+                        throw new Error('MetaMask not installed');
+                    }
+                } else if (walletType === 'walletconnect') {
+                    showMessage('WalletConnect integration coming soon!', 'info');
+                }
+            } catch (error) {
+                showConnectionError(statusDiv, statusIcon, statusText, error.message);
+            }
+        }
+
+        function showManualConnect() {
+            document.getElementById('manualConnect').classList.toggle('hidden');
+        }
+
+        async function connectWithPrivateKey() {
+            const privateKey = document.getElementById('privateKey').value.trim();
+            if (!privateKey) {
+                showMessage('Please enter your private key', 'error');
+                return;
+            }
+
+            try {
+                walletProvider = new ethers.Wallet(privateKey);
+                currentAccount = await walletProvider.getAddress();
+                
+                const statusDiv = document.getElementById('connectionStatus');
+                const statusIcon = document.getElementById('statusIcon');
+                const statusText = document.getElementById('statusText');
+                
+                showConnectionSuccess(statusDiv, statusIcon, statusText, `Connected: ${formatAddress(currentAccount)}`);
+                await initiateVerification();
+                
+            } catch (error) {
+                showMessage('Invalid private key: ' + error.message, 'error');
+            }
+        }
+
+        async function initiateVerification() {
+            try {
+                const response = await fetch('/auth/wallet/init-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: currentAccount })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    verificationNonce = result.nonce;
+                    document.getElementById('verificationMessage').textContent = 
+                        `Please sign the following message to verify ownership: ${result.message}`;
+                    document.getElementById('verificationSection').classList.remove('hidden');
+                    
+                    // Auto-sign if we have the private key
+                    if (walletProvider instanceof ethers.Wallet) {
+                        await signVerificationMessage();
+                    }
+                } else {
+                    showMessage(result.error || 'Verification initiation failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error: ' + error.message, 'error');
+            }
+        }
+
+        async function signVerificationMessage() {
+            if (!walletProvider || !verificationNonce) return;
+
+            try {
+                const message = `ForensicPlatform: Verify ownership of ${currentAccount} with nonce: ${verificationNonce}`;
+                let signature;
+                
+                if (walletProvider instanceof ethers.Wallet) {
+                    // Direct signing with private key
+                    signature = await walletProvider.signMessage(message);
+                } else {
+                    // Sign with connected wallet (MetaMask)
+                    signature = await walletProvider.getSigner().signMessage(message);
+                }
+                
+                document.getElementById('signatureInput').value = signature;
+                showMessage('Message signed successfully!', 'success');
+                
+            } catch (error) {
+                showMessage('Signing failed: ' + error.message, 'error');
+            }
+        }
+
+        async function verifySignature() {
+            const signature = document.getElementById('signatureInput').value.trim();
+            if (!signature) {
+                showMessage('Please sign the message first', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/auth/wallet/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address: currentAccount,
+                        signature: signature,
+                        nonce: verificationNonce
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    if (result.requires_email_verification) {
+                        showMessage('Email verification required. Please check your email.', 'info');
+                    } else {
+                        localStorage.setItem('jwt_token', result.token);
+                        window.location.href = '/dashboard';
+                    }
+                } else {
+                    showMessage(result.error || 'Verification failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error: ' + error.message, 'error');
+            }
+        }
+
+        function copySignature() {
+            const signatureInput = document.getElementById('signatureInput');
+            signatureInput.select();
+            document.execCommand('copy');
+            showMessage('Signature copied to clipboard!', 'success');
+        }
+
+        function showConnectionSuccess(div, icon, text, message) {
+            div.classList.remove('hidden', 'bg-red-500/20', 'border-red-500');
+            div.classList.add('bg-green-500/20', 'border-green-500', 'border');
+            icon.classList.remove('bg-red-500', 'animate-pulse');
+            icon.classList.add('bg-green-500');
+            text.textContent = message;
+        }
+
+        function showConnectionError(div, icon, text, error) {
+            div.classList.remove('hidden');
+            div.classList.add('bg-red-500/20', 'border-red-500', 'border');
+            icon.classList.add('bg-red-500', 'animate-pulse');
+            text.textContent = error;
+        }
+
+        function formatAddress(address) {
+            return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.classList.remove('hidden', 'bg-red-100', 'bg-green-100', 'bg-blue-100');
+            
+            if (type === 'error') messageDiv.classList.add('bg-red-100', 'border-red-300', 'text-red-700');
+            else if (type === 'success') messageDiv.classList.add('bg-green-100', 'border-green-300', 'text-green-700');
+            else messageDiv.classList.add('bg-blue-100', 'border-blue-300', 'text-blue-700');
+        }
+
+        // Check if MetaMask is installed
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    showMessage('Wallet disconnected', 'info');
+                    resetConnection();
+                } else {
+                    currentAccount = accounts[0];
+                    showMessage(`Account changed to: ${formatAddress(currentAccount)}`, 'info');
+                    initiateVerification();
+                }
+            });
+        }
+
+        function resetConnection() {
+            currentAccount = null;
+            verificationNonce = null;
+            document.getElementById('verificationSection').classList.add('hidden');
+            document.getElementById('connectionStatus').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!doctype html>
+<html><head>
+  <meta charset="utf-8">
+  <title>Detection Gallery - Job {{job_id}}</title>
+  <script src="{{url_for('static' , filename='providers/frame/3.4.16')}}"></script>
+  <style>
+    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+    .detection-item { transition: all 0.3s; }
+    .detection-item:hover { transform: scale(1.05); }
+    .detection-image { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; }
+    .confidence-high { border-left: 4px solid #10b981; }
+    .confidence-med { border-left: 4px solid #f59e0b; }
+    .confidence-low { border-left: 4px solid #ef4444; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+  <div class="container mx-auto px-4 py-6">
+    <div class="mb-6">
+      <button onclick="window.close()" class="bg-gray-600 px-4 py-2 rounded hover:bg-gray-500">← Close</button>
+      <h1 class="text-2xl font-bold inline-block ml-4">Detection Gallery</h1>
+    </div>
+    
+    <div class="bg-gray-800 p-4 rounded-lg mb-6">
+      <h2 class="text-lg font-semibold mb-2">Job Information</h2>
+      <div id="jobInfo" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div>Job ID: <span class="font-mono" id="jobId">Loading...</span></div>
+        <div>Total Detections: <span class="font-bold text-green-400" id="totalDetections">0</span></div>
+        <div>Status: <span id="jobStatus">Loading...</span></div>
+        <div>Source: <span id="jobSource">Loading...</span></div>
+      </div>
+    </div>
+    
+    <div class="mb-4">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="filterByClass('all')" class="filter-btn bg-indigo-600 px-3 py-1 rounded text-sm hover:bg-indigo-500">All</button>
+        <div id="classFilters"></div>
+      </div>
+      
+      <div class="flex gap-4 text-sm">
+        <label class="flex items-center">
+          <input type="range" id="confidenceFilter" min="0" max="100" value="0" class="mr-2">
+          Min Confidence: <span id="confidenceValue">0%</span>
+        </label>
+        <select id="sortOrder" class="bg-gray-700 px-2 py-1 rounded">
+          <option value="frame">Sort by Frame</option>
+          <option value="confidence">Sort by Confidence</option>
+          <option value="class">Sort by Class</option>
+          <option value="time">Sort by Time</option>
+        </select>
+      </div>
+    </div>
+    
+    <div id="detectionGallery" class="gallery-grid">
+      <!-- Detections will be loaded here -->
+    </div>
+    
+    <div id="loadingIndicator" class="text-center py-8">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      <p class="mt-2">Loading detections...</p>
+    </div>
+  </div>
+<script>
+let allDetections = [];
+let filteredDetections = [];
+let currentClassFilter = 'all';
+
+// Load gallery data
+async function loadGallery() {
+  const jobId = new URLSearchParams(window.location.search).get('job_id') || 
+                window.location.pathname.split('/')[2];
+  
+  try {
+    const response = await fetch(`/jobs/${jobId}/gallery`);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to load gallery');
+    }
+    
+    // Update job info
+    document.getElementById('jobId').textContent = data.job.id;
+    document.getElementById('totalDetections').textContent = data.total_detections;
+    document.getElementById('jobStatus').textContent = data.job.status;
+    document.getElementById('jobSource').textContent = data.job.source_type === 'url' ? 
+      `URL: ${data.job.source_url?.substring(0, 50)}...` : 
+      `File: ${data.job.upload_filename || 'Unknown'}`;
+    
+    allDetections = data.detections;
+    createClassFilters(data.class_counts);
+    filterDetections();
+    
+    document.getElementById('loadingIndicator').style.display = 'none';
+    
+  } catch (error) {
+    document.getElementById('loadingIndicator').innerHTML = 
+      `<div class="text-red-400">Error: ${error.message}</div>`;
+  }
+}
+
+function createClassFilters(classCounts) {
+  const filtersDiv = document.getElementById('classFilters');
+  filtersDiv.innerHTML = Object.entries(classCounts)
+    .sort(([,a], [,b]) => b - a)
+    .map(([className, count]) => 
+      `<button onclick="filterByClass('${className}')" class="filter-btn bg-gray-600 px-3 py-1 rounded text-sm hover:bg-gray-500">
+        ${className} (${count})
+      </button>`
+    ).join('');
+}
+
+function filterByClass(className) {
+  currentClassFilter = className;
+  // Update button styles
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.remove('bg-indigo-600', 'bg-purple-600');
+    btn.classList.add('bg-gray-600');
+  });
+  event.target.classList.remove('bg-gray-600');
+  event.target.classList.add(className === 'all' ? 'bg-indigo-600' : 'bg-purple-600');
+  
+  filterDetections();
+}
+
+function filterDetections() {
+  const minConfidence = parseInt(document.getElementById('confidenceFilter').value) / 100;
+  const sortOrder = document.getElementById('sortOrder').value;
+  
+  // Filter
+  filteredDetections = allDetections.filter(det => {
+    const classMatch = currentClassFilter === 'all' || det.class_name === currentClassFilter;
+    const confidenceMatch = det.confidence >= minConfidence;
+    return classMatch && confidenceMatch;
+  });
+  
+  // Sort
+  filteredDetections.sort((a, b) => {
+    switch (sortOrder) {
+      case 'confidence': return b.confidence - a.confidence;
+      case 'class': return a.class_name.localeCompare(b.class_name);
+      case 'time': return a.timestamp - b.timestamp;
+      default: return a.frame_number - b.frame_number;
+    }
+  });
+  
+  renderGallery();
+}
+
+function renderGallery() {
+  const gallery = document.getElementById('detectionGallery');
+  
+  if (filteredDetections.length === 0) {
+    gallery.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">No detections match the current filter</div>';
+    return;
+  }
+  
+  gallery.innerHTML = filteredDetections.map(det => {
+    const confidencePercent = Math.round(det.confidence * 100);
+    const confidenceClass = confidencePercent >= 80 ? 'confidence-high' : 
+                           confidencePercent >= 60 ? 'confidence-med' : 'confidence-low';
+    
+    return `
+      <div class="detection-item bg-gray-800 rounded-lg p-3 ${confidenceClass}">
+        ${det.image_base64 ? 
+          `<img src="data:image/png;base64,${det.image_base64}" class="detection-image mb-2" alt="${det.class_name}">` :
+          `<div class="detection-image bg-gray-700 flex items-center justify-center mb-2">
+            <span class="text-gray-400 text-sm">No Image</span>
+          </div>`
+        }
+        <div class="space-y-1">
+          <div class="font-semibold">${det.class_name}</div>
+          <div class="text-sm text-gray-400">Frame ${det.frame_number}</div>
+          <div class="text-sm text-gray-400">${det.timestamp}s</div>
+          <div class="text-sm">
+            <span class="inline-block px-2 py-1 rounded text-xs ${
+              confidencePercent >= 80 ? 'bg-green-600' : 
+              confidencePercent >= 60 ? 'bg-yellow-600' : 'bg-red-600'
+            }">${confidencePercent}%</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Event listeners
+document.getElementById('confidenceFilter').addEventListener('input', (e) => {
+  document.getElementById('confidenceValue').textContent = e.target.value + '%';
+  filterDetections();
+});
+
+document.getElementById('sortOrder').addEventListener('change', filterDetections);
+
+// Load gallery on page load
+loadGallery();
+</script>
+</body></html>
+
+# -------------------------

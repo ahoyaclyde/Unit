@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Create your Forensic Video Analysis account">
+    <title>{{ProductID}} Create Account - {{CompanyID}}</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{url_for('static', filename='providers/frame/datepicker.min.css')}}">
+    <link rel="stylesheet" href="{{url_for('static', filename='providers/frame/app.css')}}">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="{{url_for('static', filename='resources/sonic/apple-touch-icon.png')}}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{url_for('static', filename='resources/sonic/favicon-32x32.png')}}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{url_for('static', filename='resources/sonic/favicon-16x16.png')}}">
+    <link rel="icon" type="image/png" href="{{url_for('static', filename='resources/sonic/favicon.ico')}}">
+    
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .form-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        .form-input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .company-fields {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-2xl w-full">
+        <div class="text-center mb-8">
+            <a href="/" class="inline-flex items-center text-white text-2xl font-bold mb-2">
+                <img class="w-8 h-8 mr-3" src="{{url_for('static', filename='resources/sonic/logo.svg')}}" alt="logo">
+                {{ ProductID }}
+            </a>
+            <h1 class="text-4xl font-bold text-white mb-2">Create Your Account</h1>
+            <p class="text-gray-200">Join {{ProductID}} to start your forensic video analysis</p>
+        </div>
+
+        <div class="glass-effect rounded-xl p-8 text-white card-hover">
+            <form id="registerForm" class="space-y-6">
+                <!-- Username and Email -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="username" class="block text-sm font-medium mb-2">Username *</label>
+                        <input type="text" id="username" name="username"
+                               class="w-full p-3 rounded-lg form-input placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Enter your username" required>
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium mb-2">Email Address *</label>
+                        <input type="email" id="email" name="email"
+                               class="w-full p-3 rounded-lg form-input placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="your@email.com" required>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label for="password" class="block text-sm font-medium mb-2">Password *</label>
+                    <input type="password" id="password" name="password"
+                           class="w-full p-3 rounded-lg form-input placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="Create a strong password" required>
+                    <p class="text-xs text-gray-300 mt-2">Use at least 8 characters with numbers and symbols</p>
+                </div>
+
+                <!-- Country and Account Type -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="country" class="block text-sm font-medium mb-2">Country *</label>
+                        <select id="country" name="country"
+                                class="w-full p-3 rounded-lg form-input focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            <option value="">Select your country</option>
+                            <option value="United States">United States</option>
+                            <option value="United Kingdom">United Kingdom</option>
+                            <option value="Canada">Canada</option>
+                            <option value="Australia">Australia</option>
+                            <option value="Germany">Germany</option>
+                            <option value="France">France</option>
+                            <option value="Japan">Japan</option>
+                            <option value="Brazil">Brazil</option>
+                            <option value="India">India</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="accountType" class="block text-sm font-medium mb-2">Account Type</label>
+                        <select id="accountType" name="account_type"
+                                class="w-full p-3 rounded-lg form-input focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="individual">Individual Account</option>
+                            <option value="company">Company Account</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Company Fields (Hidden by default) -->
+                <div id="companyFields" class="company-fields hidden">
+                    <label for="companyName" class="block text-sm font-medium mb-2">Company Name *</label>
+                    <input type="text" id="companyName" name="company_name"
+                           class="w-full p-3 rounded-lg form-input placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="Enter company name">
+                </div>
+
+                <!-- Phone Number -->
+                <div>
+                    <label for="phone" class="block text-sm font-medium mb-2">Phone Number (Optional)</label>
+                    <input type="tel" id="phone" name="phone_number"
+                           class="w-full p-3 rounded-lg form-input placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="+1 (555) 123-4567">
+                </div>
+
+                <!-- Terms and Conditions -->
+                <div class="flex items-start space-x-3">
+                    <input type="checkbox" id="terms" name="terms" required
+                           class="mt-1 rounded bg-white/20 border-white/30 text-blue-600 focus:ring-blue-500">
+                    <label for="terms" class="text-sm text-gray-300">
+                        I agree to {{ProductID}}'s 
+                        <a href="#" class="text-blue-300 hover:text-blue-200 underline">Terms of Use</a> and 
+                        <a href="#" class="text-blue-300 hover:text-blue-200 underline">Privacy Policy</a>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" 
+                        class="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white py-3 px-4 rounded-lg font-semibold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg">
+                    Create My Account
+                </button>
+
+                <!-- Login Link -->
+                <div class="text-center mt-6">
+                    <span class="text-gray-300">Already have an account?</span>
+                    <a href="{{url_for('login_page')}}" class="text-blue-300 hover:text-blue-200 ml-2 font-semibold">Sign in here</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Features Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+            <div class="text-center text-white">
+                <div class="glass-effect rounded-lg p-4">
+                    <div class="text-2xl mb-2">🔍</div>
+                    <h3 class="font-semibold mb-1">Advanced Analysis</h3>
+                    <p class="text-sm text-gray-300">AI-powered object detection and tracking</p>
+                </div>
+            </div>
+            <div class="text-center text-white">
+                <div class="glass-effect rounded-lg p-4">
+                    <div class="text-2xl mb-2">⚡</div>
+                    <h3 class="font-semibold mb-1">Fast Processing</h3>
+                    <p class="text-sm text-gray-300">Quick video analysis with real-time results</p>
+                </div>
+            </div>
+            <div class="text-center text-white">
+                <div class="glass-effect rounded-lg p-4">
+                    <div class="text-2xl mb-2">🔒</div>
+                    <h3 class="font-semibold mb-1">Secure & Private</h3>
+                    <p class="text-sm text-gray-300">Your data is encrypted and protected</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize form functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Account type change handler
+            const accountTypeSelect = document.getElementById('accountType');
+            const companyFields = document.getElementById('companyFields');
+            const companyNameInput = document.getElementById('companyName');
+
+            accountTypeSelect.addEventListener('change', function() {
+                if (this.value === 'company') {
+                    companyFields.classList.remove('hidden');
+                    companyFields.style.maxHeight = companyFields.scrollHeight + 'px';
+                    companyNameInput.required = true;
+                } else {
+                    companyFields.classList.add('hidden');
+                    companyFields.style.maxHeight = '0';
+                    companyNameInput.required = false;
+                }
+            });
+
+            // Form submission
+            document.getElementById('registerForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Basic validation
+                if (!document.getElementById('terms').checked) {
+                    alert('Please agree to the Terms of Use and Privacy Policy');
+                    return;
+                }
+
+                const formData = {
+                    username: document.getElementById('username').value,
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value,
+                    country: document.getElementById('country').value,
+                    account_type: document.getElementById('accountType').value,
+                    phone_number: document.getElementById('phone').value || ''
+                };
+
+                // Add company name if account type is company
+                if (formData.account_type === 'company') {
+                    formData.company_name = document.getElementById('companyName').value;
+                    if (!formData.company_name) {
+                        alert('Please enter your company name');
+                        return;
+                    }
+                }
+
+                // Validate required fields
+                if (!formData.username || !formData.email || !formData.password || !formData.country) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(formData.email)) {
+                    alert('Please enter a valid email address');
+                    return;
+                }
+
+                // Validate password length
+                if (formData.password.length < 8) {
+                    alert('Password must be at least 8 characters long');
+                    return;
+                }
+
+                try {
+                    // Show loading state
+                    const submitBtn = e.target.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Account...';
+                    submitBtn.disabled = true;
+
+                    const response = await fetch('/auth/register', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        alert('Registration successful! Please check your email for verification link.');
+                        window.location.href = '/'; // Redirect to login page
+                    } else {
+                        alert('Registration failed: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('Registration error: ' + error.message);
+                    console.error('Registration error:', error);
+                } finally {
+                    // Reset button state
+                    const submitBtn = e.target.querySelector('button[type="submit"]');
+                    submitBtn.innerHTML = 'Create My Account';
+                    submitBtn.disabled = false;
+                }
+            });
+
+            // Add real-time validation
+            const inputs = document.querySelectorAll('input[required]');
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    if (!this.value) {
+                        this.classList.add('border-red-400');
+                    } else {
+                        this.classList.remove('border-red-400');
+                    }
+                });
+            });
+
+            // Password strength indicator
+            const passwordInput = document.getElementById('password');
+            passwordInput.addEventListener('input', function() {
+                const strength = calculatePasswordStrength(this.value);
+                updatePasswordStrengthIndicator(strength);
+            });
+        });
+
+        function calculatePasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
+            if (password.match(/\d/)) strength++;
+            if (password.match(/[^a-zA-Z\d]/)) strength++;
+            return strength;
+        }
+
+        function updatePasswordStrengthIndicator(strength) {
+            // You can implement a visual password strength indicator here
+            // For now, we'll just log it
+            console.log('Password strength:', strength);
+        }
+
+        // Add some interactive animations
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('transform', 'scale-105');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('transform', 'scale-105');
+            });
+        });
+    </script>
+</body>
+</html>

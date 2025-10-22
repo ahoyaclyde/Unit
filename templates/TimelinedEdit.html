@@ -1,0 +1,667 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Timeline Profiling</title>
+  <script src="{{url_for('static' , filename='providers/frame/3.4.16')}}"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .object-card {
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        .object-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .timeline-bar {
+            height: 20px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .appearance-segment {
+            height: 100%;
+            position: absolute;
+            border-radius: 10px;
+        }
+        .snapshot-img {
+            border: 2px solid;
+            border-radius: 4px;
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+        .snapshot-img:hover {
+            transform: scale(1.05);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 900px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-modal:hover {
+            color: black;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-3">
+                <i class="fas fa-user-clock text-blue-500 mr-3"></i>
+                Object Timeline Profiling
+            </h1>
+            <p class="text-gray-600 text-lg">Track individual objects with duration, reappearances, and snapshots</p>
+        </div>
+
+        <div class="grid lg:grid-cols-4 gap-8">
+            <!-- Left Sidebar -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Video Management -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">
+                        <i class="fas fa-video text-red-500 mr-2"></i>
+                        Video Management
+                    </h2>
+                    
+                    <!-- File Upload -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Upload New Video</label>
+                        <input type="file" id="video-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept="video/*">
+                        <button onclick="uploadVideo()" class="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg">
+                            <i class="fas fa-cloud-upload-alt mr-2"></i>Upload Video
+                        </button>
+                    </div>
+                    
+                    <!-- Select Existing Video -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Existing Video</label>
+                        <select id="video-select" class="w-full border border-gray-300 rounded-lg p-2 mb-2" onchange="selectExistingVideo(this.value)">
+                            <option value="">Choose a video...</option>
+                        </select>
+                        <button onclick="loadVideos()" class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh List
+                        </button>
+                    </div>
+                    
+                    <div id="upload-status" class="mt-3 text-sm"></div>
+                </div>
+
+                <!-- Analysis Controls -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">
+                        <i class="fas fa-play-circle text-green-500 mr-2"></i>
+                        Analysis Controls
+                    </h2>
+                    <button onclick="startAnalysis()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg font-semibold mb-3">
+                        Start Object Profiling
+                    </button>
+                    <button onclick="stopAnalysis()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg font-semibold">
+                        Stop Analysis
+                    </button>
+                    <div id="analysis-status" class="mt-4 hidden">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span id="status-text">Processing...</span>
+                            <span id="status-progress">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Objects Counter -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold mb-3">
+                        <i class="fas fa-object-group text-blue-500 mr-2"></i>
+                        Live Objects
+                    </h3>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-600 mb-2" id="active-objects-count">0</div>
+                        <div class="text-sm text-gray-600">Currently Tracked</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="lg:col-span-3">
+                <!-- Live Video Feed -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h2 class="text-xl font-semibold mb-4">
+                        <i class="fas fa-eye text-purple-500 mr-2"></i>
+                        Live Object Tracking
+                    </h2>
+                    <div class="video-container border-2 border-gray-200 rounded-lg bg-gray-900 relative">
+                        <img id="live-video" src="" class="w-full h-auto" style="display: none; max-height: 60vh;">
+                        <div id="initial-state" class="flex items-center justify-center h-96">
+                            <div class="text-center text-gray-500">
+                                <i class="fas fa-binoculars text-6xl mb-4"></i>
+                                <p class="text-xl">Upload and start analysis to see object tracking</p>
+                                <p class="text-sm mt-2">Each object gets unique color and detailed timeline</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid grid-cols-4 gap-4 text-center">
+                        <div class="bg-blue-50 rounded-lg p-3">
+                            <div class="text-2xl font-bold text-blue-600" id="total-frames">0</div>
+                            <div class="text-sm text-gray-600">Frames</div>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-3">
+                            <div class="text-2xl font-bold text-green-600" id="total-objects">0</div>
+                            <div class="text-sm text-gray-600">Total Objects</div>
+                        </div>
+                        <div class="bg-purple-50 rounded-lg p-3">
+                            <div class="text-2xl font-bold text-purple-600" id="current-time">0.0s</div>
+                            <div class="text-sm text-gray-600">Time</div>
+                        </div>
+                        <div class="bg-orange-50 rounded-lg p-3">
+                            <div class="text-2xl font-bold text-orange-600" id="processing-fps">0</div>
+                            <div class="text-sm text-gray-600">FPS</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Object Profiles -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">
+                            <i class="fas fa-id-card text-green-500 mr-2"></i>
+                            Object Profiles
+                        </h2>
+                        <button onclick="downloadAllSnapshots()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-download mr-2"></i>Download All Snapshots
+                        </button>
+                    </div>
+                    <div id="object-profiles" class="space-y-4 max-h-96 overflow-y-auto">
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-users text-4xl mb-2"></i>
+                            <p>Object profiles will appear here during analysis</p>
+                            <p class="text-sm mt-1">Each profile shows duration, appearances, and snapshots</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Snapshot Modal -->
+    <div id="snapshot-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="grid grid-cols-2 gap-6 mt-4">
+                <div>
+                    <h3 class="text-xl font-bold mb-4" id="modal-object-id">Object ID</h3>
+                    <div id="modal-object-info" class="space-y-3">
+                        <!-- Object info will be populated here -->
+                    </div>
+                </div>
+                <div>
+                    <img id="modal-snapshot-img" src="" class="w-full h-auto rounded-lg border-2">
+                    <div class="mt-4 text-center">
+                        <button onclick="downloadCurrentSnapshot()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-download mr-2"></i>Download This Snapshot
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentVideoId = null;
+        let websocket = null;
+        let isAnalyzing = false;
+        let frameCount = 0;
+        let lastFpsUpdate = 0;
+        let currentFps = 0;
+        let currentProfiles = {};
+        let currentSnapshotData = null;
+
+        // Initialize WebSocket
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/object-timeline`;
+            
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function() {
+                updateConnectionStatus('connected', 'Connected');
+                console.log('WebSocket connected');
+            };
+            
+            websocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleRealtimeUpdate(data);
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                }
+            };
+            
+            websocket.onclose = function() {
+                updateConnectionStatus('disconnected', 'Disconnected');
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            websocket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus('error', 'Connection Error');
+            };
+        }
+
+        function handleRealtimeUpdate(data) {
+            switch(data.type) {
+                case 'video_frame':
+                    updateVideoFrame(data);
+                    updateStatistics(data);
+                    break;
+                case 'object_profiles':
+                    currentProfiles = data.profiles;
+                    updateObjectProfiles(data.profiles);
+                    break;
+                case 'analysis_started':
+                    showNotification('Object profiling started!', 'success');
+                    document.getElementById('initial-state').style.display = 'none';
+                    document.getElementById('live-video').style.display = 'block';
+                    isAnalyzing = true;
+                    break;
+                case 'analysis_completed':
+                    showNotification('Analysis completed! Final profiles available.', 'success');
+                    isAnalyzing = false;
+                    // Save final profiles
+                    currentProfiles = data.profiles;
+                    updateObjectProfiles(data.profiles);
+                    break;
+                case 'error':
+                    showNotification('Error: ' + data.message, 'error');
+                    isAnalyzing = false;
+                    break;
+            }
+        }
+
+        function updateVideoFrame(data) {
+            const videoImg = document.getElementById('live-video');
+            videoImg.src = 'data:image/jpeg;base64,' + data.frame_data;
+            
+            // Update FPS
+            frameCount++;
+            const now = Date.now();
+            if (now - lastFpsUpdate >= 1000) {
+                currentFps = frameCount;
+                frameCount = 0;
+                lastFpsUpdate = now;
+            }
+        }
+
+        function updateStatistics(data) {
+            document.getElementById('total-frames').textContent = data.frame_number;
+            document.getElementById('current-time').textContent = data.timestamp.toFixed(1) + 's';
+            document.getElementById('processing-fps').textContent = currentFps;
+            document.getElementById('active-objects-count').textContent = data.active_objects;
+            document.getElementById('total-objects').textContent = data.total_objects;
+            
+            // Update progress
+            if (data.progress) {
+                updateAnalysisStatus('processing', `Processing... ${data.progress.toFixed(1)}%`, data.progress);
+            }
+        }
+
+        function updateObjectProfiles(profiles) {
+            const container = document.getElementById('object-profiles');
+            
+            if (!profiles || Object.keys(profiles).length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-users text-4xl mb-2"></i>
+                        <p>No objects tracked yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = Object.values(profiles).map(profile => `
+                <div class="object-card bg-white border rounded-lg p-4 shadow-sm" style="border-left-color: ${profile.color}">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <div class="flex items-center mb-1">
+                                <div class="w-4 h-4 rounded-full mr-2" style="background-color: ${profile.color}"></div>
+                                <span class="font-bold text-lg">${profile.object_id}</span>
+                                <span class="ml-2 px-2 py-1 bg-gray-100 rounded text-sm capitalize">${profile.class_name}</span>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                Duration: <strong>${profile.total_duration.toFixed(1)}s</strong> | 
+                                Frames: <strong>${profile.total_frames}</strong> | 
+                                Appearances: <strong>${profile.appearance_count}</strong>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500">Last seen</div>
+                            <div class="font-semibold">Frame ${profile.last_seen_frame}</div>
+                        </div>
+                    </div>
+                    
+                    ${profile.snapshots && profile.snapshots.length > 0 ? `
+                    <div class="mb-3">
+                        <div class="text-sm font-semibold mb-2">Snapshots:</div>
+                        <div class="flex space-x-2 overflow-x-auto">
+                            ${profile.snapshots.map((snapshot, index) => `
+                                <img src="data:image/jpeg;base64,${snapshot.image_data}" 
+                                     class="snapshot-img w-16 h-16 object-cover" 
+                                     style="border-color: ${profile.color}"
+                                     title="Frame ${snapshot.frame_num} - ${snapshot.timestamp.toFixed(1)}s"
+                                     onclick="showSnapshotModal('${profile.object_id}', ${index})">
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="flex justify-between items-center text-xs text-gray-500">
+                        <span>Tracked segments: ${profile.appearance_segments ? profile.appearance_segments.length : 0}</span>
+                        <button onclick="downloadObjectSnapshots('${profile.object_id}')" class="text-blue-500 hover:text-blue-700">
+                            <i class="fas fa-download mr-1"></i>Download Snapshots
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showSnapshotModal(objectId, snapshotIndex) {
+            const profile = currentProfiles[objectId];
+            if (!profile || !profile.snapshots || !profile.snapshots[snapshotIndex]) return;
+            
+            const snapshot = profile.snapshots[snapshotIndex];
+            currentSnapshotData = { objectId, snapshotIndex, snapshot, profile };
+            
+            // Update modal content
+            document.getElementById('modal-object-id').textContent = `${objectId} (${profile.class_name})`;
+            document.getElementById('modal-snapshot-img').src = `data:image/jpeg;base64,${snapshot.image_data}`;
+            
+            // Populate object info
+            const infoContainer = document.getElementById('modal-object-info');
+            infoContainer.innerHTML = `
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="font-semibold">Object ID:</div>
+                    <div>${objectId}</div>
+                    
+                    <div class="font-semibold">Class:</div>
+                    <div class="capitalize">${profile.class_name}</div>
+                    
+                    <div class="font-semibold">Total Duration:</div>
+                    <div>${profile.total_duration.toFixed(1)} seconds</div>
+                    
+                    <div class="font-semibold">Total Frames:</div>
+                    <div>${profile.total_frames}</div>
+                    
+                    <div class="font-semibold">Appearances:</div>
+                    <div>${profile.appearance_count}</div>
+                    
+                    <div class="font-semibold">Snapshot Frame:</div>
+                    <div>${snapshot.frame_num}</div>
+                    
+                    <div class="font-semibold">Snapshot Time:</div>
+                    <div>${snapshot.timestamp.toFixed(1)}s</div>
+                    
+                    <div class="font-semibold">Position:</div>
+                    <div>(${snapshot.position[0]}, ${snapshot.position[1]})</div>
+                    
+                    <div class="font-semibold">Bounding Box:</div>
+                    <div>${snapshot.bbox[0]}x${snapshot.bbox[1]} ${snapshot.bbox[2]}x${snapshot.bbox[3]}</div>
+                </div>
+                
+                ${profile.appearance_segments && profile.appearance_segments.length > 0 ? `
+                <div class="mt-4">
+                    <div class="font-semibold mb-2">Appearance Segments:</div>
+                    <div class="space-y-1 text-xs">
+                        ${profile.appearance_segments.map(segment => `
+                            <div class="flex justify-between">
+                                <span>Frames ${segment.start_frame}-${segment.end_frame}</span>
+                                <span>${(segment.end_time - segment.start_time).toFixed(1)}s</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            // Show modal
+            document.getElementById('snapshot-modal').style.display = 'block';
+        }
+
+        function downloadCurrentSnapshot() {
+            if (!currentSnapshotData) return;
+            
+            const { snapshot, profile } = currentSnapshotData;
+            const link = document.createElement('a');
+            link.download = `${profile.object_id}_frame_${snapshot.frame_num}.jpg`;
+            link.href = `data:image/jpeg;base64,${snapshot.image_data}`;
+            link.click();
+        }
+
+        function downloadObjectSnapshots(objectId) {
+            const profile = currentProfiles[objectId];
+            if (!profile || !profile.snapshots) return;
+            
+            profile.snapshots.forEach((snapshot, index) => {
+                const link = document.createElement('a');
+                link.download = `${objectId}_snapshot_${index + 1}_frame_${snapshot.frame_num}.jpg`;
+                link.href = `data:image/jpeg;base64,${snapshot.image_data}`;
+                link.click();
+            });
+        }
+
+        function downloadAllSnapshots() {
+            Object.values(currentProfiles).forEach(profile => {
+                if (profile.snapshots) {
+                    profile.snapshots.forEach((snapshot, index) => {
+                        const link = document.createElement('a');
+                        link.download = `${profile.object_id}_snapshot_${index + 1}_frame_${snapshot.frame_num}.jpg`;
+                        link.href = `data:image/jpeg;base64,${snapshot.image_data}`;
+                        link.click();
+                    });
+                }
+            });
+        }
+
+        // Close modal when clicking X
+        document.querySelector('.close-modal').onclick = function() {
+            document.getElementById('snapshot-modal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('snapshot-modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        async function uploadVideo() {
+            const fileInput = document.getElementById('video-upload');
+            const file = fileInput.files[0];
+            const statusEl = document.getElementById('upload-status');
+            
+            if (!file) {
+                statusEl.innerHTML = '<span class="text-red-400">Please select a video file first</span>';
+                return;
+            }
+            
+            statusEl.innerHTML = '<span class="text-yellow-400">Uploading...</span>';
+            
+            const formData = new FormData();
+            formData.append('video', file);
+            
+            try {
+                const response = await fetch('/api/object-timeline/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    currentVideoId = result.video_id;
+                    statusEl.innerHTML = '<span class="text-green-400">Video uploaded successfully!</span>';
+                    showNotification('Video uploaded successfully!', 'success');
+                    loadVideos(); // Refresh the video list
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                statusEl.innerHTML = `<span class="text-red-400">Upload failed: ${error.message}</span>`;
+                showNotification('Upload failed: ' + error.message, 'error');
+            }
+        }
+
+        async function loadVideos() {
+            try {
+                const response = await fetch('/api/object-timeline/videos');
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayVideoList(result.videos);
+                } else {
+                    throw new Error(result.error || 'Failed to load videos');
+                }
+            } catch (error) {
+                console.error('Error loading videos:', error);
+                showNotification('Failed to load videos: ' + error.message, 'error');
+            }
+        }
+
+        function displayVideoList(videos) {
+            const select = document.getElementById('video-select');
+            
+            if (!videos || videos.length === 0) {
+                select.innerHTML = '<option value="">No videos available</option>';
+                return;
+            }
+            
+            select.innerHTML = '<option value="">Choose a video...</option>' +
+                videos.map(video => `
+                    <option value="${video.id}" ${video.id == currentVideoId ? 'selected' : ''}>
+                        ${video.filename} (${new Date(video.upload_time).toLocaleDateString()})
+                    </option>
+                `).join('');
+        }
+
+        function selectExistingVideo(videoId) {
+            if (videoId) {
+                currentVideoId = parseInt(videoId);
+                showNotification('Video selected', 'success');
+            }
+        }
+
+        function startAnalysis() {
+            if (!currentVideoId) {
+                showNotification('Please select or upload a video first', 'error');
+                return;
+            }
+            
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({
+                    type: 'start_analysis',
+                    video_id: currentVideoId
+                }));
+            } else {
+                showNotification('WebSocket not connected. Please wait...', 'error');
+            }
+        }
+
+        function stopAnalysis() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({
+                    type: 'stop_analysis'
+                }));
+            }
+            isAnalyzing = false;
+            showNotification('Analysis stopped', 'info');
+        }
+
+        function updateConnectionStatus(status, message) {
+            // Create status element if it doesn't exist
+            let statusEl = document.getElementById('connection-status');
+            if (!statusEl) {
+                statusEl = document.createElement('div');
+                statusEl.id = 'connection-status';
+                statusEl.className = 'fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50';
+                document.body.appendChild(statusEl);
+            }
+            
+            statusEl.className = 'fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 ';
+            statusEl.innerHTML = `<i class="fas fa-wifi mr-2"></i><span>${message}</span>`;
+            
+            switch(status) {
+                case 'connected':
+                    statusEl.classList.add('bg-green-600', 'text-white');
+                    break;
+                case 'disconnected':
+                    statusEl.classList.add('bg-yellow-600', 'text-white');
+                    break;
+                case 'error':
+                    statusEl.classList.add('bg-red-600', 'text-white');
+                    break;
+            }
+        }
+
+        function updateAnalysisStatus(status, message, progress) {
+            const statusEl = document.getElementById('analysis-status');
+            const textEl = document.getElementById('status-text');
+            const progressEl = document.getElementById('status-progress');
+            const progressBar = document.getElementById('progress-bar');
+            
+            statusEl.classList.remove('hidden');
+            textEl.textContent = message;
+            progressEl.textContent = progress.toFixed(1) + '%';
+            progressBar.style.width = progress + '%';
+            
+            progressBar.className = 'h-2 rounded-full transition-all duration-300 ';
+            if (status === 'processing') progressBar.classList.add('bg-blue-600');
+            else if (status === 'completed') progressBar.classList.add('bg-green-600');
+            else if (status === 'error') progressBar.classList.add('bg-red-600');
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            } text-white`;
+            notification.innerHTML = `<div class="flex items-center"><i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} mr-2"></i><span>${message}</span></div>`;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 4000);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+            loadVideos(); // Load existing videos on page load
+        });
+    </script>
+</body>
+</html>

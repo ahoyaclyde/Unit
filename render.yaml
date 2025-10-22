@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: forensic-video-analysis
+    env: python
+    plan: free
+    region: ohio
+    branch: main
+    
+    # BUILD COMMAND - Install compatible versions first
+    buildCommand: |
+      echo "🚀 Starting build with compatible versions..."
+      apt-get update
+      apt-get install -y \
+        ffmpeg \
+        libsm6 \
+        libxext6 \
+        libgl1-mesa-glx \
+        libjpeg-dev \
+        libpng-dev \
+        zlib1g-dev
+      apt-get clean
+      rm -rf /var/lib/apt/lists/*
+      
+      echo "📦 Installing compatible Flask/Quart versions..."
+      pip install --upgrade pip
+      
+      # Install the core compatible versions first
+      pip install --no-cache-dir flask==2.3.3 werkzeug==2.3.7 quart==0.18.4
+      
+      # Then install the rest
+      pip install --no-cache-dir --timeout=300 -r requirements.txt
+      
+      echo "✅ Build completed successfully"
+    
+    # START COMMAND
+    startCommand: hypercorn asgi:application --bind 0.0.0.0:$PORT --workers 1 --access-logfile -
+    
+    # ENVIRONMENT VARIABLES
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RENDER
+        value: true
+    
+    # HEALTH CHECK
+    healthCheckPath: /health
+    
+    autoDeploy: true

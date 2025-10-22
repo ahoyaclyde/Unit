@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Login to your Forensic Video Analysis account">
+    <title>{{ProductID}} Sign in - {{CompanyID}}</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{url_for('static', filename='providers/frame/datepicker.min.css')}}">
+    <link rel="stylesheet" href="{{url_for('static', filename='providers/frame/app.css')}}">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="{{url_for('static', filename='resources/sonic/apple-touch-icon.png')}}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{url_for('static', filename='resources/sonic/favicon-32x32.png')}}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{url_for('static', filename='resources/sonic/favicon-16x16.png')}}">
+    <link rel="icon" type="image/png" href="{{url_for('static', filename='resources/sonic/favicon.ico')}}">
+    
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-4xl w-full">
+        <div class="text-center mb-8">
+            <a href="/" class="inline-flex items-center text-white text-2xl font-bold mb-2">
+                <img class="w-8 h-8 mr-3" src="{{url_for('static', filename='resources/sonic/logo.svg')}}" alt="logo">
+                {{ ProductID }}
+            </a>
+            <h1 class="text-4xl font-bold text-white mb-2">Welcome Back</h1>
+            <p class="text-gray-200">Sign in to your {{ProductID}} account to continue your forensic analysis</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Traditional Login -->
+            <div class="glass-effect rounded-xl p-8 text-white card-hover">
+                <h2 class="text-2xl font-bold mb-6">Account Login</h2>
+                <form id="loginForm" class="space-y-6">
+                    <div>
+                        <label for="username" class="block text-sm font-medium mb-2">Username or Email</label>
+                        <input type="text" id="username" name="username" 
+                               class="w-full p-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter your username or email" required>
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium mb-2">Password</label>
+                        <input type="password" id="password" name="password"
+                               class="w-full p-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter your password" required>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center">
+                            <input type="checkbox" class="rounded bg-white/20 border-white/30 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm">Remember me</span>
+                        </label>
+                        <a href="#" class="text-blue-300 hover:text-blue-200 text-sm">Forgot password?</a>
+                    </div>
+                    <button type="submit" 
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition duration-200 transform hover:scale-105">
+                        Sign In to Account
+                    </button>
+                </form>
+                
+                <div class="text-center mt-6">
+                    <span class="text-gray-300">Don't have an account?</span>
+                    <a href="{{url_for('signup_page')}}" class="text-blue-300 hover:text-blue-200 ml-2 font-semibold">Create Account</a>
+                </div>
+            </div>
+
+            <!-- Web3 Login -->
+            <div class="glass-effect rounded-xl p-8 text-white card-hover">
+                <h2 class="text-2xl font-bold mb-6">Web3 Wallet Login</h2>
+                <p class="text-gray-200 mb-6">Connect your wallet for instant access</p>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <!-- Ethereum -->
+                    <button onclick="connectWeb3('ethereum')" 
+                            class="p-4 bg-orange-500/20 border border-orange-400/30 rounded-lg text-center hover:bg-orange-500/30 transition duration-200">
+                        <div class="text-2xl mb-2">🦊</div>
+                        <div class="font-semibold">Ethereum</div>
+                        <div class="text-xs text-orange-200">MetaMask</div>
+                    </button>
+                    
+                    <!-- Bitcoin -->
+                    <button onclick="connectWeb3('bitcoin')" 
+                            class="p-4 bg-orange-600/20 border border-orange-500/30 rounded-lg text-center hover:bg-orange-600/30 transition duration-200">
+                        <div class="text-2xl mb-2">₿</div>
+                        <div class="font-semibold">Bitcoin</div>
+                        <div class="text-xs text-orange-200">Any Wallet</div>
+                    </button>
+                    
+                    <!-- Solana -->
+                    <button onclick="connectWeb3('solana')" 
+                            class="p-4 bg-purple-500/20 border border-purple-400/30 rounded-lg text-center hover:bg-purple-500/30 transition duration-200">
+                        <div class="text-2xl mb-2">◎</div>
+                        <div class="font-semibold">Solana</div>
+                        <div class="text-xs text-purple-200">Phantom</div>
+                    </button>
+                    
+                    <!-- Lisk -->
+                    <button onclick="connectWeb3('lisk')" 
+                            class="p-4 bg-blue-500/20 border border-blue-400/30 rounded-lg text-center hover:bg-blue-500/30 transition duration-200">
+                        <div class="text-2xl mb-2">⛓️</div>
+                        <div class="font-semibold">Lisk</div>
+                        <div class="text-xs text-blue-200">Lisk Wallet</div>
+                    </button>
+                </div>
+
+                <div class="text-center">
+                    <button onclick="showManualWallet()" class="text-blue-300 hover:text-blue-200 text-sm">
+                        Or connect wallet manually
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Wallet Modal -->
+        <div id="manualWalletModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+            <div class="bg-white rounded-xl p-6 w-full max-w-md text-gray-800">
+                <h3 class="text-xl font-bold mb-4">Connect Wallet Manually</h3>
+                <form id="manualWalletForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Blockchain</label>
+                        <select id="manualChain" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                            <option value="">Select Blockchain</option>
+                            <option value="ethereum">Ethereum</option>
+                            <option value="bitcoin">Bitcoin</option>
+                            <option value="solana">Solana</option>
+                            <option value="lisk">Lisk</option>
+                            <option value="polygon">Polygon</option>
+                            <option value="avalanche">Avalanche</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Wallet Address</label>
+                        <input type="text" id="manualAddress" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="0x..." required>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="hideManualWallet()" class="flex-1 bg-gray-300 hover:bg-gray-400 p-3 rounded font-semibold">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white p-3 rounded font-semibold">
+                            Connect
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Traditional login form
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('jwt_token', result.token);
+                    window.location.href = '/dashboard';
+                } else {
+                    alert('Login failed: ' + result.error);
+                }
+            } catch (error) {
+                alert('Login error: ' + error.message);
+            }
+        });
+
+        // Web3 connection functions
+        async function connectWeb3(chainType) {
+            try {
+                let address;
+                
+                if (chainType === 'ethereum' && typeof window.ethereum !== 'undefined') {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    address = accounts[0];
+                } else {
+                    // For other chains, show manual entry
+                    showManualWallet();
+                    document.getElementById('manualChain').value = chainType;
+                    return;
+                }
+                
+                // Attempt login with wallet
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        wallet_address: address,
+                        chain_type: chainType
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('jwt_token', result.token);
+                    window.location.href = '/dashboard';
+                } else {
+                    // Wallet not registered, offer to register
+                    if (confirm('Wallet not registered. Would you like to create an account?')) {
+                        window.location.href = '/signup';
+                    }
+                }
+            } catch (error) {
+                alert('Connection failed: ' + error.message);
+            }
+        }
+
+        // Manual wallet functions
+        function showManualWallet() {
+            document.getElementById('manualWalletModal').classList.remove('hidden');
+        }
+
+        function hideManualWallet() {
+            document.getElementById('manualWalletModal').classList.add('hidden');
+        }
+
+        document.getElementById('manualWalletForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const chainType = document.getElementById('manualChain').value;
+            const address = document.getElementById('manualAddress').value;
+            
+            if (!chainType || !address) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        wallet_address: address,
+                        chain_type: chainType
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('jwt_token', result.token);
+                    window.location.href = '/dashboard';
+                } else {
+                    alert('Login failed: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
